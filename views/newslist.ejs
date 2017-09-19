@@ -1,0 +1,93 @@
+<!DOCTYPE>
+<html>
+	<head>
+		<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+		<meta name="format-detection" content="telephone=no"/>
+		<title>欢迎-悠派集团新闻发布系统</title>
+		<link href="css/common.css" rel="stylesheet" type="text/css" />
+		<script src="js/jquery-2.1.1.min.js"></script>
+		<script src="js/common.js" charset="utf-8"></script>
+	</head>
+	<body >
+		<% include header.ejs %>
+		<div class="page_box">
+			<% include sliderbar_left.ejs %>
+			<div class="page_main news_listmain">
+				<div class="news_list">
+					<div class="ty_tisp">新闻列表：</div>
+					<% if(News.length) {%>
+					<ul></ul>
+					<div class="news_listfy">
+						<a href="JavaScript:;" class='news_prve'>上一页</a>
+						<div class="fy_length"></div>
+						<a href="JavaScript:;" class='news_next'>下一页</a>
+					</div>
+					<%} else{%>
+					<div class="noall">没有内容哦~</div>
+					<%}%>
+				</div>
+			</div>
+		</div>
+		<script>
+			var page = 1;
+			var pagelength = 10;
+			$(document).on("click", ".news_listfy > a", function(){
+				if($(this).hasClass("news_prve")){
+					//上一页
+					if(page>1){
+						page--;
+						getNewinner(page,pagelength)
+					}
+				}else{
+					//下一页
+					if(page < $(".fy_length a").length){
+						page++;
+						getNewinner(page,pagelength)
+					}
+				}
+			});
+			$(document).on("click", ".fy_length > a", function(){
+				page = $(this).text();
+				getNewinner(page,pagelength)
+			});
+			getNewinner(page,pagelength);
+			function getNewinner(page,pagelength){
+				 $.post("http://news.upalo2o.com/upnews",{
+					 "page" : page-1,
+					 "length" : 8,
+				 },function(result){
+					 if(result != "-1"){
+						 var fystr = "";
+						 var listr = "";
+						 for(var i = 0; i < result.total/pagelength ; i++){
+							 fystr += "<a href='JavaScript:;'>" + (i+1) + "</a>";
+						 }
+						 $(".fy_length").html(fystr);
+						 for(var i = 0; i < result.newslit.length ; i++){
+							 var newslit =  result.newslit;
+							 var tips = "";
+							 if(newslit[i].sort==9){
+								 tips = "<i>置顶</i>";
+							 }
+							 listr += "<li _id="+ newslit[i]._id +">" +
+									 "<span><a target='_blank' href=/preview/"+ newslit[i]._id +">" + newslit[i].title +"</a>" + tips + "</span>" +
+									 "<div class=lists_cz>" +
+									 "<a href=/preview/"+ newslit[i]._id +" target=_blank class=news_open>预览</a>"+
+									 "<a href=/editornews/"+ newslit[i]._id +" class=news_updata>修改</a>" +
+									 "<a href=JavaScript:; class=news_remove>移入回收站</a>" +
+									 "</div>" +
+									 "</li>";
+						 }
+
+						 $(".news_list ul").html(listr);
+						 $(".fy_length a").eq(page-1).addClass('cur').siblings().removeClass('cur');
+					 }else{
+						 Parser("服务器异常！请稍后再试");
+					 }
+				 });
+			}
+
+		</script>
+	</body>
+</html>

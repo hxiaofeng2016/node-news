@@ -1,0 +1,164 @@
+<!DOCTYPE>
+<html>
+	<head>
+		<meta http-equiv="content-type" content="text/html;charset=utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+		<meta name="format-detection" content="telephone=no"/>
+		<title>欢迎-悠派集团新闻发布系统</title>
+		<link href="/css/common.css" rel="stylesheet" type="text/css" />
+		<link href="/flatpickr/flatpickr.min.css" rel="stylesheet" type="text/css" />
+		<script src="/js/jquery-2.1.1.min.js"></script>
+		<script src="/ueditor/ueditor.config.js"></script>
+		<script src="/ueditor/ueditor.all.min.js"> </script>
+		<script src="/ueditor/lang/zh-cn/zh-cn.js"> </script>
+		<script src="/flatpickr/flatpickr.js"></script>
+		<script src="/js/common.js" charset="utf-8"></script>
+	</head>
+	<body >
+		<% include header.ejs %>
+		<div class="page_box">
+			<% include sliderbar_left.ejs %>
+			<div class="page_main">
+				<div class="write_box">
+					<div class="ty_tisp">新闻编辑：</div>
+					<div class="news_add">
+						<div class="news_top">
+							<p><em>标题：</em><input id="title" type="text" placeholder="请输入新闻标题" value="<%=News.title%>" /></p>
+							<p>
+								<em>时间：</em><input id="time" type="text" value="<%=News.time%>"/>
+								<em>类型：</em><select id="type"><option value ="0"<%if(News.type == 0){%> selected = "selected" <%}%>>集团新闻</option><option value ="1" <%if(News.type == 1){%> selected = "selected" <%}%> >子公司</option></select>
+								<em>排序：</em><label><input id="sort" type="checkbox" <%if(News.sort > 0){%> checked <%}%> /> 置顶</label>
+							</p>
+							<p><em>封面：</em></p>
+							<div class="filebox">
+								<div class="fm_img">
+									<img id="coverimg" src="<%=News.coverimg%>" alt=""/>
+									<span>请上传新闻封面~</span>
+								</div>
+								<div>
+									<span>尺寸规定：300*170</span>
+									<a href="JavaScript:;" id="file_a">上传封面</a>
+									<input type="file" id="file_button"/>
+								</div>
+							</div>
+							<p><em>正文：</em></p>
+						</div>
+						<div class="editor_box"><%-News.content%></div>
+						<script id="editor" type="text/plain" style="height:400px"></script>
+					</div>
+					<div class="cz_button">
+						<input value="发布" type="button" class="add_news" _id="<%=News._id%>">
+						<input value="存入草稿" type="button" class="add_draft" _id="<%=News._id%>">
+						<input value="预览" type="button" class="preview_button" _id="<%=News._id%>">
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			$(function(){
+				var ue = UE.getEditor('editor',{
+//					initialFrameHeight:400,//设置编辑器高度
+//					scaleEnabled:true ,//设置不自动调整高度
+//					tableDragable :true//设置不自动调整高度
+				});
+
+				var time = $("#time");
+				if(time.val()<1){
+					time.val(getDate());
+				}
+				time.flatpickr(); //日期插件
+
+				ue.addListener("ready", function () {
+					var text = $(".editor_box").html();
+					$("#edui1_scale").addClass("hide");
+					if(text.length>0){
+						var html = ue.getContent();
+						ue.setContent(text);
+						$(".editor_box").remove();
+					}
+				});
+
+				//图片上传
+				var coverimg = $("#coverimg");
+				$("#file_a").on("click", function(){
+					$('#file_button').click();
+				})
+				$('#file_button').change(function(e) {
+					var oldSrc = coverimg.attr('src');
+					var _files = this.files[0];
+					var r = new FileReader();
+					r.readAsDataURL(_files);
+					$(r).load(function() {
+						coverimg.attr('src',this.result);
+						if(coverimg.width()!=300 && coverimg.height()!=170){
+							Palert("请按照尺寸规定：300*170  上传图片");
+							coverimg.attr('src',oldSrc);
+							return false;
+						}
+						var data = new FormData();
+						var ect = (_files).name.split('.')[1];
+						data.append("modal_file", _files);
+						$.ajax({
+							type: 'post',
+							dataType: 'json',
+							url: "/dofileimg",
+							data: data,
+							contentType: false,
+							processData: false
+						}).done(function(data, status) {
+							console.log('上传成功');
+							coverimg.attr('src',"/images/newcover/preview/"+data.src);
+						}).fail(function(err) {
+							console.log('上传失败');
+						})
+					})
+				})
+				//添加新闻
+				var newsBtn = $(".cz_button input");
+				$(document).on("click",".cz_button input", function(){
+					var self = $(this);
+					var	title = $("#title").val(),
+						_id = $(this).attr("_id"),
+						time = $("#time").val(),
+						coverimg = $("#coverimg").attr("src"),
+						sort = $('#sort').is(':checked') ? 9 : 0,
+						content = ue.getContent(),
+						state = 1,
+						type = $('#type option:selected').val();
+
+					if(title.length < 1){
+						return Palert("请输入标题！")
+					}
+					if(coverimg.length < 1){
+						return Palert("请上传新闻封面！")
+					}
+					//添加新闻
+					if(!self.hasClass("add_news")){
+						state = 0;
+					}
+					$.post("/doeditornews",{
+						"_id" : _id,
+						"title" : title,
+						"content" : content,
+						"sort": sort,
+						"coverimg": coverimg,
+						"state" : state,
+						"type" : type,
+						"time" : time
+					},function(result){
+						if(result != "-1"){
+							Palert("操作成功！");
+							newsBtn.attr("_id",result._id);
+							if(self.hasClass('preview_button')){
+								window.open("/preview/" + $(".cz_button .add_news").attr("_id"))
+							}
+						}else{
+							Palert("网路异常，请重试！");
+						}
+					});
+				});
+			});
+		</script>
+	</body>
+</html>
